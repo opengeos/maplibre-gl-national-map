@@ -1,14 +1,23 @@
 // React entry point
-export { PluginControlReact } from './lib/core/PluginControlReact';
+export { NationalMapControlReact } from './lib/core/NationalMapControlReact';
 
 // React hooks
-export { usePluginState } from './lib/hooks';
+export { useNationalMapState } from './lib/hooks';
 
 // Re-export types for React consumers
 export type {
-  PluginControlOptions,
-  PluginState,
-  PluginControlReactProps,
-  PluginControlEvent,
-  PluginControlEventHandler,
+  NationalMapControlOptions,
+  NationalMapState,
+  NationalMapTheme,
+  NationalMapControlReactProps,
+  NationalMapControlEvent,
+  NationalMapControlEventHandler,
 } from './lib/core/types';
+export type {
+  NationalMapHost,
+  NationalMapCategory,
+  NationalMapService,
+  ServiceType,
+  ServiceRenderMode,
+} from './lib/data';
+export type { ActiveLayer } from './lib/core/LayerManager';

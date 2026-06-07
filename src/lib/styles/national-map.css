@@ -1,0 +1,391 @@
+/**
+ * MapLibre GL National Map Control Styles
+ *
+ * Theming is driven by CSS custom properties. Light values are the defaults;
+ * dark values apply automatically via prefers-color-scheme (theme: 'auto')
+ * or explicitly via the .national-map-theme-dark class. The
+ * .national-map-theme-light class re-declares light values so a forced light
+ * theme wins over the dark media query.
+ */
+
+.national-map,
+.national-map-panel {
+  --nm-bg: #fff;
+  --nm-fg: #1f2a37;
+  --nm-fg-strong: #333;
+  --nm-muted: #888;
+  --nm-border: #e0e0e0;
+  --nm-input-border: #ddd;
+  --nm-accent: #4a90d9;
+  --nm-accent-hover: #3a7bc8;
+  --nm-accent-ring: rgba(74, 144, 217, 0.15);
+  --nm-row-hover: rgba(0, 0, 0, 0.04);
+  --nm-btn-hover: rgba(0, 0, 0, 0.05);
+  --nm-shadow: 0 0 0 2px rgba(0, 0, 0, 0.1);
+  --nm-scroll-thumb: #ccc;
+  --nm-scroll-thumb-hover: #aaa;
+  --nm-disabled: #ccc;
+  --nm-disabled-fg: #f7f7f7;
+}
+
+@media (prefers-color-scheme: dark) {
+  .national-map:not(.national-map-theme-light),
+  .national-map-panel:not(.national-map-theme-light) {
+    --nm-bg: #1f2933;
+    --nm-fg: #e5e7eb;
+    --nm-fg-strong: #f3f4f6;
+    --nm-muted: #9ca3af;
+    --nm-border: #374151;
+    --nm-input-border: #4b5563;
+    --nm-accent: #5aa0e6;
+    --nm-accent-hover: #6cb0f0;
+    --nm-accent-ring: rgba(90, 160, 230, 0.25);
+    --nm-row-hover: rgba(255, 255, 255, 0.06);
+    --nm-btn-hover: rgba(255, 255, 255, 0.08);
+    --nm-shadow: 0 0 0 2px rgba(0, 0, 0, 0.5);
+    --nm-scroll-thumb: #4b5563;
+    --nm-scroll-thumb-hover: #6b7280;
+    --nm-disabled: #4b5563;
+    --nm-disabled-fg: #9ca3af;
+  }
+}
+
+.national-map.national-map-theme-dark,
+.national-map-panel.national-map-theme-dark {
+  --nm-bg: #1f2933;
+  --nm-fg: #e5e7eb;
+  --nm-fg-strong: #f3f4f6;
+  --nm-muted: #9ca3af;
+  --nm-border: #374151;
+  --nm-input-border: #4b5563;
+  --nm-accent: #5aa0e6;
+  --nm-accent-hover: #6cb0f0;
+  --nm-accent-ring: rgba(90, 160, 230, 0.25);
+  --nm-row-hover: rgba(255, 255, 255, 0.06);
+  --nm-btn-hover: rgba(255, 255, 255, 0.08);
+  --nm-shadow: 0 0 0 2px rgba(0, 0, 0, 0.5);
+  --nm-scroll-thumb: #4b5563;
+  --nm-scroll-thumb-hover: #6b7280;
+  --nm-disabled: #4b5563;
+  --nm-disabled-fg: #9ca3af;
+}
+
+/* Container - matches maplibregl-ctrl styling */
+.national-map {
+  background: var(--nm-bg);
+  border-radius: 4px;
+  box-shadow: var(--nm-shadow);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Toggle button - 29x29 to match navigation control */
+.national-map-toggle {
+  background: none;
+  border: none;
+  padding: 0;
+  width: 29px;
+  height: 29px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  outline: none;
+  color: var(--nm-fg);
+}
+
+.national-map-toggle:hover {
+  background-color: var(--nm-btn-hover);
+}
+
+.national-map-toggle .national-map-icon {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+
+.national-map-toggle .national-map-icon svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+  stroke: currentColor;
+  fill: none;
+}
+
+/* Panel - positioned dynamically by JavaScript for floating behavior.
+ * Flex column: fixed header, scrollable content. JS constrains max-height to
+ * the map height so small screens get a vertical scrollbar. */
+.national-map-panel {
+  position: absolute;
+  /* Position is set dynamically by _updatePanelPosition() */
+  background: var(--nm-bg);
+  color: var(--nm-fg);
+  border-radius: 4px;
+  box-shadow: var(--nm-shadow);
+  min-width: 240px;
+  max-width: min(420px, calc(100% - 20px));
+  max-height: calc(100% - 60px); /* safety net; refined by JS */
+  z-index: 1000;
+  padding: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  display: none;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+.national-map-panel.expanded {
+  display: flex;
+}
+
+/* Panel header */
+.national-map-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-weight: 600;
+  color: var(--nm-fg-strong);
+  padding: 4px 0 8px 0;
+  border-bottom: 1px solid var(--nm-border);
+  margin-bottom: 8px;
+  flex: 0 0 auto;
+}
+
+.national-map-title {
+  flex: 1 1 auto;
+  font-size: 13px;
+}
+
+.national-map-close {
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: transparent;
+  color: var(--nm-muted);
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  transition: color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.national-map-close:hover {
+  color: var(--nm-fg-strong);
+}
+
+/* Content - scrollable area below the header */
+.national-map-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* Scrollbar styling */
+.national-map-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.national-map-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.national-map-content::-webkit-scrollbar-thumb {
+  background: var(--nm-scroll-thumb);
+  border-radius: 3px;
+}
+
+.national-map-content::-webkit-scrollbar-thumb:hover {
+  background: var(--nm-scroll-thumb-hover);
+}
+
+/* Search box */
+.national-map-search {
+  width: 100%;
+  padding: 6px 10px;
+  margin-bottom: 8px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--nm-fg);
+  background: var(--nm-bg);
+  border: 1px solid var(--nm-input-border);
+  border-radius: 4px;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.national-map-search::placeholder {
+  color: var(--nm-muted);
+}
+
+.national-map-search:focus {
+  border-color: var(--nm-accent);
+  box-shadow: 0 0 0 3px var(--nm-accent-ring);
+}
+
+/* Catalog groups */
+.national-map-group {
+  margin-bottom: 10px;
+}
+
+.national-map-group:last-child {
+  margin-bottom: 0;
+}
+
+.national-map-group-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--nm-muted);
+  padding: 4px 0;
+}
+
+/* Catalog rows */
+.national-map-service-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 5px 4px;
+  border-radius: 4px;
+}
+
+.national-map-service-row:hover {
+  background: var(--nm-row-hover);
+}
+
+.national-map-service-info {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.national-map-service-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--nm-fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.national-map-service-desc {
+  font-size: 11px;
+  color: var(--nm-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.national-map-add-btn {
+  flex: 0 0 auto;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  font-family: inherit;
+  color: #fff;
+  background: var(--nm-accent);
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.national-map-add-btn:hover {
+  background: var(--nm-accent-hover);
+}
+
+.national-map-add-btn:focus-visible {
+  outline: 2px solid var(--nm-accent);
+  outline-offset: 2px;
+}
+
+.national-map-add-btn:disabled {
+  background: var(--nm-disabled);
+  color: var(--nm-disabled-fg);
+  cursor: not-allowed;
+}
+
+/* Active layers */
+.national-map-active.has-layers {
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--nm-border);
+  margin-bottom: 8px;
+}
+
+.national-map-active-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px;
+  border-radius: 4px;
+}
+
+.national-map-active-row:hover {
+  background: var(--nm-row-hover);
+}
+
+.national-map-visibility {
+  flex: 0 0 auto;
+  margin: 0;
+  accent-color: var(--nm-accent);
+  cursor: pointer;
+}
+
+.national-map-active-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-size: 12px;
+  color: var(--nm-fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.national-map-opacity {
+  flex: 0 0 70px;
+  width: 70px;
+  margin: 0;
+  accent-color: var(--nm-accent);
+  cursor: pointer;
+}
+
+.national-map-remove-btn {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  border: none;
+  background: transparent;
+  color: var(--nm-muted);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  border-radius: 4px;
+  transition: color 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.national-map-remove-btn:hover {
+  color: var(--nm-fg-strong);
+  background: var(--nm-btn-hover);
+}
+
+/* Empty search result */
+.national-map-empty {
+  margin: 0;
+  color: var(--nm-muted);
+  font-size: 12px;
+  text-align: center;
+  padding: 16px 0;
+}

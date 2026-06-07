@@ -1,11 +1,11 @@
 # Examples
 
-This directory contains example implementations of the MapLibre GL Plugin Template.
+This directory contains example implementations of the MapLibre GL National Map plugin.
 
 ## Available Examples
 
 ### Basic Example
-A simple vanilla JavaScript/TypeScript example showing how to add the plugin control to a map.
+A simple vanilla JavaScript/TypeScript example showing how to add the National Map control to a map.
 
 ```bash
 # Run from project root

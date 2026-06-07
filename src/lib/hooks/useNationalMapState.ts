@@ -1,32 +1,33 @@
 import { useState, useCallback } from 'react';
-import type { PluginState } from '../core/types';
+import type { NationalMapState } from '../core/types';
 
 /**
- * Default initial state for the plugin
+ * Default initial state for the control
  */
-const DEFAULT_STATE: PluginState = {
+const DEFAULT_STATE: NationalMapState = {
   collapsed: true,
-  panelWidth: 300,
+  panelWidth: 320,
+  activeLayerIds: [],
   data: {},
 };
 
 /**
- * Custom hook for managing plugin state in React applications.
+ * Custom hook for managing National Map control state in React applications.
  *
  * This hook provides a simple way to track and update the state
- * of a PluginControl from React components.
+ * of a NationalMapControl from React components.
  *
  * @example
  * ```tsx
  * function MyComponent() {
- *   const { state, setCollapsed, setData, reset } = usePluginState();
+ *   const { state, setCollapsed, setData, reset } = useNationalMapState();
  *
  *   return (
  *     <div>
  *       <button onClick={() => setCollapsed(!state.collapsed)}>
  *         {state.collapsed ? 'Expand' : 'Collapse'}
  *       </button>
- *       <PluginControlReact
+ *       <NationalMapControlReact
  *         map={map}
  *         collapsed={state.collapsed}
  *         onStateChange={(newState) => setState(newState)}
@@ -39,8 +40,8 @@ const DEFAULT_STATE: PluginState = {
  * @param initialState - Optional initial state values
  * @returns Object containing state and update functions
  */
-export function usePluginState(initialState?: Partial<PluginState>) {
-  const [state, setState] = useState<PluginState>({
+export function useNationalMapState(initialState?: Partial<NationalMapState>) {
+  const [state, setState] = useState<NationalMapState>({
     ...DEFAULT_STATE,
     ...initialState,
   });
