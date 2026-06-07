@@ -280,7 +280,10 @@ export const STATIC_CATALOG: NationalMapService[] = [
     'Imagery',
     'NAIP NDVI',
     'Normalized difference vegetation index from NAIP imagery; dark green indicates dense vegetation.',
-    { renderingRule: '{"rasterFunction":"NDVI_Color"}' },
+    {
+      host: 'imagery',
+      renderingRule: '{"rasterFunction":"NDVI_Color"}',
+    },
   ),
 
   // --- Cartography (dynamic MapServer) ---

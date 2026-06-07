@@ -31,7 +31,7 @@ The catalog mirrors the map services listed at [apps.nationalmap.gov/services](h
 | Basemaps    | USGS Topo, Imagery Only, Imagery Topo, Shaded Relief, Hydro Cached                                     | Cached XYZ tiles           |
 | Hydrography | 3DHP, NHD, NHDPlus HR, Watershed Boundary Dataset                                                      | Dynamic map export         |
 | Elevation   | 3DEP Elevation (hillshade)                                                                            | ImageServer export         |
-| Imagery     | NAIP Plus, NAIP False Color (NIR), NAIP NDVI                                                          | ImageServer export         |
+| Imagery     | NAIP Plus, NAIP False Color Imagery, NAIP NDVI                                                        | ImageServer export         |
 | Cartography | Contours, Geographic Names, Governmental Units, Map Indices, Selectable Polygons, Structures, Transportation, USGS Trails | Dynamic map export |
 | Hazards     | FEMA National Flood Hazard Layer                                                                      | Dynamic map export         |
 | Other Data  | Scanned USA Topo Maps, BLM PLSS, FWS National Wetlands Inventory                                       | Cached tiles / map export  |
