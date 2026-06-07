@@ -1,27 +1,245 @@
-# GeoLibre Plugin Template
+# MapLibre GL National Map
 
-A template for creating GeoLibre Desktop plugins backed by MapLibre GL JS controls. It still includes the standalone MapLibre control and React wrapper so plugin authors can develop and test the control outside GeoLibre.
+A [MapLibre GL JS](https://maplibre.org) plugin for searching and adding [USGS National Map web services](https://apps.nationalmap.gov/services/) to a map. It ships as a standard MapLibre `IControl` with a React wrapper, and also builds as a GeoLibre Desktop plugin bundle.
 
-[![npm version](https://img.shields.io/npm/v/geolibre-plugin-template.svg)](https://www.npmjs.com/package/geolibre-plugin-template)
+[![npm version](https://img.shields.io/npm/v/maplibre-gl-national-map.svg)](https://www.npmjs.com/package/maplibre-gl-national-map)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Open in CodeSandbox](https://img.shields.io/badge/Open%20in-CodeSandbox-blue?logo=codesandbox)](https://codesandbox.io/p/github/opengeos/geolibre-plugin-template)
-[![Open in StackBlitz](https://img.shields.io/badge/Open%20in-StackBlitz-blue?logo=stackblitz)](https://stackblitz.com/github/opengeos/geolibre-plugin-template)
+[![Open in CodeSandbox](https://img.shields.io/badge/Open%20in-CodeSandbox-blue?logo=codesandbox)](https://codesandbox.io/p/github/opengeos/maplibre-gl-national-map)
+[![Open in StackBlitz](https://img.shields.io/badge/Open%20in-StackBlitz-blue?logo=stackblitz)](https://stackblitz.com/github/opengeos/maplibre-gl-national-map)
 
 ## Features
 
+- **Service Catalog** - Browse 20+ USGS National Map services grouped by collapsible categories (Basemaps, Hydrography, Elevation, Cartography, Indexes)
+- **Search** - Filter services by name, title, description, or category; matching categories expand automatically
+- **Layer Insertion Point** - An "Insert before" selector in the panel (or the `beforeId` option) inserts added layers beneath an existing layer (e.g. labels); changing it re-anchors layers already added
+- **Resizable Panel** - Drag the panel edge to resize; works from left and right corner placements
+- **Live Catalog Refresh** - Fetches the latest service listings from the National Map ArcGIS REST endpoints at runtime, with a built-in static catalog as an instant-render fallback (works offline)
+- **Layer Management** - Toggle visibility, adjust opacity, and remove added layers from an "Active layers" section
+- **Light/Dark Theme** - Follows `prefers-color-scheme` by default, with a `theme` option to force light or dark
+- **Small-Screen Friendly** - The panel constrains itself to the map height and scrolls vertically
+- **Collapsible Control** - 29x29 toggle button matching MapLibre's navigation control, with a floating panel
+- **TypeScript Support** - All public types exported from the package root
+- **React Integration** - React wrapper component and custom hook
 - **GeoLibre Bundle Output** - Builds a zip with root `plugin.json`, bundled ESM, and CSS for GeoLibre Desktop
-- **TypeScript Support** - Full TypeScript support with type definitions
-- **React Integration** - React wrapper component and custom hooks
-- **IControl Implementation** - Implements MapLibre's IControl interface
-- **Modern Build Setup** - Vite-based library and GeoLibre bundle builds
-- **Testing** - Vitest setup with React Testing Library
-- **CI/CD Ready** - GitHub Actions for npm publishing and GitHub Pages
+
+## Supported Services
+
+The catalog mirrors the map services listed at [apps.nationalmap.gov/services](https://apps.nationalmap.gov/services/). All endpoints are CORS-enabled ArcGIS REST services and need no API key:
+
+| Category    | Services                                                                                              | Rendering                  |
+| ----------- | ----------------------------------------------------------------------------------------------------- | -------------------------- |
+| Basemaps    | USGS Topo, Imagery Only, Imagery Topo, Shaded Relief, Hydro Cached                                     | Cached XYZ tiles           |
+| Hydrography | 3DHP, NHD, NHDPlus HR, Watershed Boundary Dataset                                                      | Dynamic map export         |
+| Elevation   | 3DEP Elevation (hillshade)                                                                            | ImageServer export         |
+| Imagery     | NAIP Plus, NAIP False Color Imagery, NAIP NDVI                                                        | ImageServer export         |
+| Cartography | Contours, Geographic Names, Governmental Units, Map Indices, Selectable Polygons, Structures, Transportation, USGS Trails | Dynamic map export |
+| Hazards     | FEMA National Flood Hazard Layer                                                                      | Dynamic map export         |
+| Other Data  | Scanned USA Topo Maps, BLM PLSS, FWS National Wetlands Inventory                                       | Cached tiles / map export  |
+| Indexes     | 3DEP Elevation Index, NHDPlus HR Index, Seamless 1m DEM Index, NAIP Imagery Index, US Topo Availability, Special Edition 250K Maps, 3DEP Acquisition Grid | Dynamic map export |
+
+A few services from the page are intentionally excluded: WFS/WCS endpoints and FeatureServers (not raster-displayable), NLCD land cover (WMS landing page only), and partner endpoints that were unreachable at testing time (ScienceBase geology, USGS ecosystems, GAP land cover, earthquake faults, mine symbols, NPS boundaries).
+
+Note: layers added later render on top of earlier ones (or beneath the `beforeId` layer when configured). Remove and re-add layers to change stacking.
 
 ## Installation
 
 ```bash
-npm install geolibre-plugin-template
+npm install maplibre-gl-national-map
 ```
+
+## Quick Start
+
+### Vanilla JavaScript/TypeScript
+
+```typescript
+import maplibregl from "maplibre-gl";
+import { NationalMapControl } from "maplibre-gl-national-map";
+import "maplibre-gl-national-map/style.css";
+
+const map = new maplibregl.Map({
+  container: "map",
+  style: "https://tiles.openfreemap.org/styles/positron",
+  center: [-98.5, 39.8],
+  zoom: 4,
+});
+
+map.on("load", () => {
+  const control = new NationalMapControl({
+    title: "USGS National Map",
+    collapsed: false,
+    theme: "auto",
+  });
+
+  map.addControl(control, "top-right");
+
+  // Programmatic layer management
+  control.addService("basemap/USGSTopo");
+  console.log(control.getActiveLayers());
+});
+```
+
+### React
+
+```tsx
+import { useEffect, useRef, useState } from "react";
+import maplibregl, { Map } from "maplibre-gl";
+import {
+  NationalMapControlReact,
+  useNationalMapState,
+} from "maplibre-gl-national-map/react";
+import "maplibre-gl-national-map/style.css";
+
+function App() {
+  const mapContainer = useRef<HTMLDivElement>(null);
+  const [map, setMap] = useState<Map | null>(null);
+  const { state, toggle } = useNationalMapState();
+
+  useEffect(() => {
+    if (!mapContainer.current) return;
+
+    const mapInstance = new maplibregl.Map({
+      container: mapContainer.current,
+      style: "https://tiles.openfreemap.org/styles/positron",
+      center: [-98.5, 39.8],
+      zoom: 4,
+    });
+
+    mapInstance.on("load", () => setMap(mapInstance));
+
+    return () => mapInstance.remove();
+  }, []);
+
+  return (
+    <div style={{ width: "100%", height: "100vh" }}>
+      <div ref={mapContainer} style={{ width: "100%", height: "100%" }} />
+      {map && (
+        <NationalMapControlReact
+          map={map}
+          title="National Map"
+          collapsed={state.collapsed}
+          theme="auto"
+          onStateChange={(newState) => console.log(newState)}
+        />
+      )}
+    </div>
+  );
+}
+```
+
+## API
+
+### NationalMapControl
+
+The main control class implementing MapLibre's `IControl` interface.
+
+#### Constructor Options
+
+| Option       | Type      | Default          | Description                                                                |
+| ------------ | --------- | ---------------- | -------------------------------------------------------------------------- |
+| `collapsed`  | `boolean` | `true`           | Whether the panel starts collapsed (showing only the 29x29 toggle button)  |
+| `position`   | `string`  | `'top-right'`    | Control position on the map                                                |
+| `title`      | `string`  | `'USGS National Map'` | Title displayed in the header                                              |
+| `panelWidth` | `number`  | `320`            | Initial width of the dropdown panel in pixels (user-resizable by dragging the panel edge) |
+| `className`  | `string`  | `''`             | Custom CSS class name                                                      |
+| `theme`      | `string`  | `'auto'`         | Color theme: `'light'`, `'dark'`, or `'auto'` (follows `prefers-color-scheme`) |
+| `beforeId`   | `string`  | `undefined`      | Existing layer id to insert added layers before, so services render underneath it (ignored if the layer does not exist). Also adjustable at runtime via the panel's "Insert before" selector |
+
+#### Methods
+
+- `toggle()` - Toggle the collapsed state
+- `expand()` - Expand the panel
+- `collapse()` - Collapse the panel
+- `getState()` - Get the current state (includes `activeLayerIds`)
+- `setState(state)` - Update the state
+- `addService(serviceId)` - Add a catalog service to the map (e.g. `"basemap/USGSTopo"`)
+- `removeService(serviceId)` - Remove a previously added service
+- `getActiveLayers()` - Get the services currently added to the map
+- `setTheme(theme)` - Change the theme at runtime
+- `on(event, handler)` - Register an event handler
+- `off(event, handler)` - Remove an event handler
+- `getMap()` - Get the map instance
+- `getContainer()` - Get the container element
+
+#### Events
+
+- `collapse` - Fired when the panel is collapsed
+- `expand` - Fired when the panel is expanded
+- `statechange` - Fired when the state changes
+- `layeradd` - Fired when a service is added to the map (`event.service` is the service)
+- `layerremove` - Fired when a service is removed from the map
+
+### NationalMapControlReact
+
+React wrapper component for `NationalMapControl`.
+
+#### Props
+
+All `NationalMapControl` options plus:
+
+| Prop            | Type       | Description                         |
+| --------------- | ---------- | ----------------------------------- |
+| `map`           | `Map`      | MapLibre GL map instance (required) |
+| `onStateChange` | `function` | Callback fired when state changes   |
+
+### useNationalMapState
+
+Custom React hook for managing control state.
+
+```typescript
+const {
+  state, // Current state
+  setState, // Replace the state
+  setCollapsed, // Set collapsed state
+  setPanelWidth, // Set panel width
+  setData, // Merge custom data
+  reset, // Reset to defaults
+  toggle, // Toggle collapsed
+} = useNationalMapState({ collapsed: false });
+```
+
+### Data Layer
+
+The catalog and spec builders are exported for advanced use without the UI control:
+
+```typescript
+import {
+  STATIC_CATALOG, // Built-in service catalog
+  fetchCatalog, // Live catalog fetch with static fallback
+  buildLayerSpec, // NationalMapService -> MapLibre source/layer specs
+  filterServices, // Search the catalog
+  groupByCategory, // Group services for display
+  LayerManager, // Add/remove/visibility/opacity on a map
+} from "maplibre-gl-national-map";
+
+const spec = buildLayerSpec(STATIC_CATALOG[0]);
+map.addSource(spec.sourceId, spec.source);
+map.addLayer(spec.layer);
+```
+
+Exported types include `NationalMapService`, `NationalMapControlOptions`, `NationalMapState`, `NationalMapTheme`, `NationalMapHost`, `NationalMapCategory`, `ServiceType`, `ServiceRenderMode`, `ActiveLayer`, `LayerSpec`, and `CategoryGroup`.
+
+## Theming
+
+The control uses CSS custom properties scoped to `.national-map` and `.national-map-panel`. With `theme: 'auto'` (default), dark colors apply when the OS is in dark mode. Use `theme: 'light'` or `theme: 'dark'` to force a theme, or override the `--nm-*` variables in your own CSS:
+
+```css
+.national-map-panel {
+  --nm-accent: #2e7d32;
+  --nm-accent-hover: #1b5e20;
+}
+```
+
+## Examples
+
+Run locally:
+
+```bash
+npm install
+npm run dev
+```
+
+- Basic: http://localhost:5173/examples/basic/
+- React (with theme switcher): http://localhost:5173/examples/react/
 
 ## Build a GeoLibre plugin zip
 
@@ -35,15 +253,7 @@ npm run package:geolibre
 This creates:
 
 ```text
-geolibre-plugin/geolibre-plugin-template-0.1.0.zip
-```
-
-The generated zip contains:
-
-```text
-plugin.json
-dist/index.js
-dist/style.css
+geolibre-plugin/maplibre-gl-national-map-0.1.0.zip
 ```
 
 Copy the zip into GeoLibre Desktop's app data `plugins/` directory and restart GeoLibre. On Linux with the default app identifier, that directory is usually:
@@ -51,8 +261,6 @@ Copy the zip into GeoLibre Desktop's app data `plugins/` directory and restart G
 ```text
 ~/.local/share/org.geolibre.desktop/plugins/
 ```
-
-Customize the GeoLibre wrapper in `src/geolibre.ts` and the manifest in `geolibre-plugin/plugin.json`. The manifest `id`, `name`, and `version` must match the exported plugin in `src/geolibre.ts`.
 
 For the GeoLibre web app, serve the unpacked plugin with CORS enabled:
 
@@ -67,269 +275,24 @@ Then add this manifest URL in GeoLibre Settings > Plugins:
 http://localhost:8000/plugin.json
 ```
 
-Using `python -m http.server` for this cross-origin web app case is not enough
-because it does not send `Access-Control-Allow-Origin`.
-
-## Quick Start
-
-### Vanilla JavaScript/TypeScript
-
-```typescript
-import maplibregl from "maplibre-gl";
-import { PluginControl } from "geolibre-plugin-template";
-import "geolibre-plugin-template/style.css";
-
-const map = new maplibregl.Map({
-  container: "map",
-  style: "https://demotiles.maplibre.org/style.json",
-  center: [0, 0],
-  zoom: 2,
-});
-
-map.on("load", () => {
-  const control = new PluginControl({
-    title: "My Plugin",
-    collapsed: false,
-    panelWidth: 300,
-  });
-
-  map.addControl(control, "top-right");
-});
-```
-
-### React
-
-```tsx
-import { useEffect, useRef, useState } from "react";
-import maplibregl, { Map } from "maplibre-gl";
-import {
-  PluginControlReact,
-  usePluginState,
-} from "geolibre-plugin-template/react";
-import "geolibre-plugin-template/style.css";
-
-function App() {
-  const mapContainer = useRef<HTMLDivElement>(null);
-  const [map, setMap] = useState<Map | null>(null);
-  const { state, toggle } = usePluginState();
-
-  useEffect(() => {
-    if (!mapContainer.current) return;
-
-    const mapInstance = new maplibregl.Map({
-      container: mapContainer.current,
-      style: "https://demotiles.maplibre.org/style.json",
-      center: [0, 0],
-      zoom: 2,
-    });
-
-    mapInstance.on("load", () => setMap(mapInstance));
-
-    return () => mapInstance.remove();
-  }, []);
-
-  return (
-    <div style={{ width: "100%", height: "100vh" }}>
-      <div ref={mapContainer} style={{ width: "100%", height: "100%" }} />
-      {map && (
-        <PluginControlReact
-          map={map}
-          title="My Plugin"
-          collapsed={state.collapsed}
-          onStateChange={(newState) => console.log(newState)}
-        />
-      )}
-    </div>
-  );
-}
-```
-
-## API
-
-### PluginControl
-
-The main control class implementing MapLibre's `IControl` interface.
-
-#### Constructor Options
-
-| Option       | Type      | Default            | Description                                                               |
-| ------------ | --------- | ------------------ | ------------------------------------------------------------------------- |
-| `collapsed`  | `boolean` | `true`             | Whether the panel starts collapsed (showing only the 29x29 toggle button) |
-| `position`   | `string`  | `'top-right'`      | Control position on the map                                               |
-| `title`      | `string`  | `'Plugin Control'` | Title displayed in the header                                             |
-| `panelWidth` | `number`  | `300`              | Width of the dropdown panel in pixels                                     |
-| `className`  | `string`  | `''`               | Custom CSS class name                                                     |
-
-#### Methods
-
-- `toggle()` - Toggle the collapsed state
-- `expand()` - Expand the panel
-- `collapse()` - Collapse the panel
-- `getState()` - Get the current state
-- `setState(state)` - Update the state
-- `on(event, handler)` - Register an event handler
-- `off(event, handler)` - Remove an event handler
-- `getMap()` - Get the map instance
-- `getContainer()` - Get the container element
-
-#### Events
-
-- `collapse` - Fired when the panel is collapsed
-- `expand` - Fired when the panel is expanded
-- `statechange` - Fired when the state changes
-
-### PluginControlReact
-
-React wrapper component for `PluginControl`.
-
-#### Props
-
-All `PluginControl` options plus:
-
-| Prop            | Type       | Description                         |
-| --------------- | ---------- | ----------------------------------- |
-| `map`           | `Map`      | MapLibre GL map instance (required) |
-| `onStateChange` | `function` | Callback fired when state changes   |
-
-### usePluginState
-
-Custom React hook for managing plugin state.
-
-```typescript
-const {
-  state, // Current state
-  setState, // Update entire state
-  setCollapsed, // Set collapsed state
-  setPanelWidth, // Set panel width
-  setData, // Set custom data
-  reset, // Reset to initial state
-  toggle, // Toggle collapsed state
-} = usePluginState(initialState);
-```
-
-## Utilities
-
-The package exports several utility functions:
-
-- `clamp(value, min, max)` - Clamp a value between min and max
-- `formatNumericValue(value, step)` - Format a number with appropriate decimals
-- `generateId(prefix?)` - Generate a unique ID
-- `debounce(fn, delay)` - Debounce a function
-- `throttle(fn, limit)` - Throttle a function
-- `classNames(classes)` - Build a class string from an object
-
 ## Development
 
-### Setup
-
 ```bash
-# Clone the repository
-git clone https://github.com/your-username/geolibre-plugin-template.git
-cd geolibre-plugin-template
-
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-```
-
-### Scripts
-
-| Script                     | Description                              |
-| -------------------------- | ---------------------------------------- |
-| `npm run dev`              | Start development server                 |
-| `npm run build`            | Build the library and GeoLibre bundle    |
-| `npm run build:lib`        | Build the standalone MapLibre library    |
-| `npm run build:geolibre`   | Build the GeoLibre ESM and CSS bundle    |
-| `npm run package:geolibre` | Build and zip the GeoLibre plugin bundle |
-| `npm run build:examples`   | Build examples for deployment            |
-| `npm run test`             | Run tests                                |
-| `npm run test:ui`          | Run tests with UI                        |
-| `npm run test:coverage`    | Run tests with coverage                  |
-| `npm run lint`             | Lint the code                            |
-| `npm run format`           | Format the code                          |
-
-### Project Structure
-
-```text
-geolibre-plugin-template/
-├── geolibre-plugin/
-│   └── plugin.json          # GeoLibre external plugin manifest
-├── scripts/
-│   └── package-geolibre-plugin.mjs
-├── src/
-│   ├── index.ts              # Main entry point
-│   ├── geolibre.ts           # GeoLibre plugin wrapper entry point
-│   ├── react.ts              # React entry point
-│   ├── index.css             # Root styles
-│   └── lib/
-│       ├── core/             # Core classes and types
-│       ├── hooks/            # React hooks
-│       ├── utils/            # Utility functions
-│       └── styles/           # Component styles
-├── tests/                    # Test files
-├── examples/                 # Example applications
-│   ├── basic/               # Vanilla JS example
-│   └── react/               # React example
-└── .github/workflows/        # CI/CD workflows
+npm install      # Install dependencies
+npm run dev      # Start the dev server
+npm test         # Run the test suite
+npm run lint     # Lint
+npm run build    # Build the library and GeoLibre bundle
 ```
 
 ## Docker
 
-The examples can be run using Docker. The image is automatically built and published to GitHub Container Registry.
-
-### Pull and Run
-
 ```bash
-# Pull the latest image
-docker pull ghcr.io/opengeos/geolibre-plugin-template:latest
-
-# Run the container
-docker run -p 8080:80 ghcr.io/opengeos/geolibre-plugin-template:latest
+docker build -t maplibre-gl-national-map .
+docker run -p 8080:80 maplibre-gl-national-map
+# Open http://localhost:8080/maplibre-gl-national-map/
 ```
-
-Then open http://localhost:8080/geolibre-plugin-template/ in your browser to view the examples.
-
-### Build Locally
-
-```bash
-# Build the image
-docker build -t geolibre-plugin-template .
-
-# Run the container
-docker run -p 8080:80 geolibre-plugin-template
-```
-
-### Available Tags
-
-| Tag      | Description                      |
-| -------- | -------------------------------- |
-| `latest` | Latest release                   |
-| `x.y.z`  | Specific version (e.g., `1.0.0`) |
-| `x.y`    | Minor version (e.g., `1.0`)      |
-
-### Publish to npm
-
-```bash
-npm login
-npm whoami
-npm publish --access public
-```
-
-Set up Trusted Publisher on npmjs.com
-
-## Customization
-
-To use this template for your own plugin:
-
-1. Clone or fork this repository
-2. Update `package.json` with your plugin name and details
-3. Modify `src/lib/core/PluginControl.ts` to implement your plugin logic
-4. Update the styles in `src/lib/styles/plugin-control.css`
-5. Add custom utilities, hooks, or components as needed
-6. Update the README with your plugin's documentation
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
+MIT

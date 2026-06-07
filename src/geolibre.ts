@@ -1,6 +1,6 @@
-import { PluginControl } from "./lib/core/PluginControl";
-import type { PluginState } from "./lib/core/types";
-import "./lib/styles/plugin-control.css";
+import { NationalMapControl } from "./lib/core/NationalMapControl";
+import type { NationalMapState } from "./lib/core/types";
+import "./lib/styles/national-map.css";
 
 type GeoLibreMapControlPosition =
   | "top-left"
@@ -10,10 +10,10 @@ type GeoLibreMapControlPosition =
 
 interface GeoLibreAppAPI {
   addMapControl: (
-    control: PluginControl,
+    control: NationalMapControl,
     position?: GeoLibreMapControlPosition,
   ) => boolean;
-  removeMapControl: (control: PluginControl) => void;
+  removeMapControl: (control: NationalMapControl) => void;
 }
 
 interface GeoLibrePlugin {
@@ -31,15 +31,15 @@ interface GeoLibrePlugin {
   applyProjectState?: (app: GeoLibreAppAPI, state: unknown) => boolean | void;
 }
 
-let control: PluginControl | null = null;
+let control: NationalMapControl | null = null;
 let position: GeoLibreMapControlPosition = "top-right";
-let pendingState: Partial<PluginState> | null = null;
+let pendingState: Partial<NationalMapState> | null = null;
 
-function createControl(): PluginControl {
-  const nextControl = new PluginControl({
+function createControl(): NationalMapControl {
+  const nextControl = new NationalMapControl({
     collapsed: pendingState?.collapsed ?? true,
-    panelWidth: pendingState?.panelWidth ?? 300,
-    title: "GeoLibre Plugin Template",
+    panelWidth: pendingState?.panelWidth ?? 320,
+    title: "USGS National Map",
   });
 
   if (pendingState) {
@@ -49,7 +49,9 @@ function createControl(): PluginControl {
   return nextControl;
 }
 
-function isPluginState(value: unknown): value is Partial<PluginState> {
+function isNationalMapState(
+  value: unknown,
+): value is Partial<NationalMapState> {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     return false;
   }
@@ -59,6 +61,13 @@ function isPluginState(value: unknown): value is Partial<PluginState> {
     return false;
   }
   if ("panelWidth" in candidate && typeof candidate.panelWidth !== "number") {
+    return false;
+  }
+  if (
+    "activeLayerIds" in candidate &&
+    candidate.activeLayerIds !== undefined &&
+    !Array.isArray(candidate.activeLayerIds)
+  ) {
     return false;
   }
   if (
@@ -74,8 +83,8 @@ function isPluginState(value: unknown): value is Partial<PluginState> {
 }
 
 export const plugin: GeoLibrePlugin = {
-  id: "geolibre-plugin-template",
-  name: "GeoLibre Plugin Template",
+  id: "maplibre-gl-national-map",
+  name: "National Map",
   version: "0.1.0",
   activate(app) {
     control = control ?? createControl();
@@ -110,7 +119,7 @@ export const plugin: GeoLibrePlugin = {
     return control?.getState() ?? pendingState ?? undefined;
   },
   applyProjectState(_app, state) {
-    if (!isPluginState(state)) return false;
+    if (!isNationalMapState(state)) return false;
     pendingState = state;
     control?.setState(state);
   },

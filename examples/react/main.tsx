@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import maplibregl, { Map } from 'maplibre-gl';
-import { PluginControlReact, usePluginState } from '../../src/react';
+import { NationalMapControlReact, useNationalMapState } from '../../src/react';
+import type { NationalMapTheme } from '../../src/react';
 import '../../src/index.css';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
@@ -11,7 +12,8 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 function App() {
   const mapContainer = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<Map | null>(null);
-  const { state, toggle } = usePluginState({ collapsed: false });
+  const [theme, setTheme] = useState<NationalMapTheme>('auto');
+  const { state, toggle } = useNationalMapState({ collapsed: false });
 
   // Initialize the map
   useEffect(() => {
@@ -19,9 +21,9 @@ function App() {
 
     const mapInstance = new maplibregl.Map({
       container: mapContainer.current,
-      style: 'https://demotiles.maplibre.org/style.json',
-      center: [0, 0],
-      zoom: 2,
+      style: 'https://tiles.openfreemap.org/styles/positron',
+      center: [-98.5, 39.8],
+      zoom: 4,
     });
 
     // Add navigation controls to top-right
@@ -40,40 +42,63 @@ function App() {
   }, []);
 
   const handleStateChange = (newState: typeof state) => {
-    console.log('Plugin state changed:', newState);
+    console.log('Control state changed:', newState);
   };
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
       <div ref={mapContainer} style={{ width: '100%', height: '100%' }} />
 
-      {/* External toggle button */}
-      <button
-        onClick={toggle}
+      {/* External controls: panel toggle and theme selector */}
+      <div
         style={{
           position: 'absolute',
           top: 10,
           left: 10,
           zIndex: 1,
-          padding: '8px 16px',
-          background: '#4a90d9',
-          color: 'white',
-          border: 'none',
-          borderRadius: 4,
-          cursor: 'pointer',
-          fontWeight: 500,
+          display: 'flex',
+          gap: 8,
         }}
       >
-        {state.collapsed ? 'Expand' : 'Collapse'} Panel
-      </button>
+        <button
+          onClick={toggle}
+          style={{
+            padding: '8px 16px',
+            background: '#4a90d9',
+            color: 'white',
+            border: 'none',
+            borderRadius: 4,
+            cursor: 'pointer',
+            fontWeight: 500,
+          }}
+        >
+          {state.collapsed ? 'Expand' : 'Collapse'} Panel
+        </button>
+        <select
+          value={theme}
+          onChange={(e) => setTheme(e.target.value as NationalMapTheme)}
+          aria-label="Control theme"
+          style={{
+            padding: '8px 12px',
+            borderRadius: 4,
+            border: '1px solid #ccc',
+            cursor: 'pointer',
+          }}
+        >
+          <option value="auto">Theme: Auto</option>
+          <option value="light">Theme: Light</option>
+          <option value="dark">Theme: Dark</option>
+        </select>
+      </div>
 
-      {/* Plugin control */}
+      {/* National Map control */}
       {map && (
-        <PluginControlReact
+        <NationalMapControlReact
           map={map}
-          title="React Plugin"
+          title="USGS National Map"
           collapsed={state.collapsed}
           panelWidth={320}
+          theme={theme}
           onStateChange={handleStateChange}
         />
       )}
