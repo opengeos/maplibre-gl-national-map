@@ -268,8 +268,19 @@ export const STATIC_CATALOG: NationalMapService[] = [
     'USGSNAIPImagery',
     'ImageServer',
     'exportImage',
-    'NAIP 4-Band Imagery',
-    'Four-band (RGB + near-infrared) National Agriculture Imagery Program orthoimagery.',
+    'NAIP False Color Imagery',
+    'False color composite (near-infrared, red, green) of NAIP orthoimagery; vegetation appears red.',
+    { renderingRule: '{"rasterFunction":"FalseColorComposite"}' },
+  ),
+  partnerService(
+    'imagery/USGSNAIPImagery-NDVI',
+    'https://imagery.nationalmap.gov/arcgis/rest/services/USGSNAIPImagery/ImageServer',
+    'ImageServer',
+    'exportImage',
+    'Imagery',
+    'NAIP NDVI',
+    'Normalized difference vegetation index from NAIP imagery; dark green indicates dense vegetation.',
+    { renderingRule: '{"rasterFunction":"NDVI_Color"}' },
   ),
 
   // --- Cartography (dynamic MapServer) ---
