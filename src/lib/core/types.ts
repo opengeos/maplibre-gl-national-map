@@ -27,7 +27,7 @@ export interface NationalMapControlOptions {
 
   /**
    * Title displayed in the control header
-   * @default 'National Map'
+   * @default 'USGS National Map'
    */
   title?: string;
 
@@ -47,6 +47,13 @@ export interface NationalMapControlOptions {
    * @default 'auto'
    */
   theme?: NationalMapTheme;
+
+  /**
+   * Existing layer id to insert National Map layers before, so added
+   * services render underneath it (e.g. a label layer). Ignored when the
+   * layer does not exist on the map.
+   */
+  beforeId?: string;
 }
 
 /**

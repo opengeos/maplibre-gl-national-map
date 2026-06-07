@@ -9,8 +9,10 @@ A [MapLibre GL JS](https://maplibre.org) plugin for searching and adding [USGS N
 
 ## Features
 
-- **Service Catalog** - Browse 20+ USGS National Map services grouped by category (Basemaps, Hydrography, Elevation, Cartography, Indexes)
-- **Search** - Filter services by name, title, description, or category
+- **Service Catalog** - Browse 20+ USGS National Map services grouped by collapsible categories (Basemaps, Hydrography, Elevation, Cartography, Indexes)
+- **Search** - Filter services by name, title, description, or category; matching categories expand automatically
+- **Layer Insertion Point** - Optional `beforeId` inserts added layers beneath an existing layer (e.g. labels)
+- **Resizable Panel** - Drag the panel edge to resize; works from left and right corner placements
 - **Live Catalog Refresh** - Fetches the latest service listings from the National Map ArcGIS REST endpoints at runtime, with a built-in static catalog as an instant-render fallback (works offline)
 - **Layer Management** - Toggle visibility, adjust opacity, and remove added layers from an "Active layers" section
 - **Light/Dark Theme** - Follows `prefers-color-scheme` by default, with a `theme` option to force light or dark
@@ -22,17 +24,22 @@ A [MapLibre GL JS](https://maplibre.org) plugin for searching and adding [USGS N
 
 ## Supported Services
 
-All services are ArcGIS REST endpoints under `*.nationalmap.gov` (CORS-enabled, no API key required):
+The catalog mirrors the map services listed at [apps.nationalmap.gov/services](https://apps.nationalmap.gov/services/). All endpoints are CORS-enabled ArcGIS REST services and need no API key:
 
 | Category    | Services                                                                                              | Rendering                  |
 | ----------- | ----------------------------------------------------------------------------------------------------- | -------------------------- |
 | Basemaps    | USGS Topo, Imagery Only, Imagery Topo, Shaded Relief, Hydro Cached                                     | Cached XYZ tiles           |
 | Hydrography | 3DHP, NHD, NHDPlus HR, Watershed Boundary Dataset                                                      | Dynamic map export         |
 | Elevation   | 3DEP Elevation (hillshade)                                                                            | ImageServer export         |
-| Cartography | Contours, Geographic Names, Governmental Units, Map Indices, Selectable Polygons, Structures, Transportation | Dynamic map export   |
-| Indexes     | 3DEP Elevation Index, NHDPlus HR Index, Seamless 1m DEM Index, NAIP Imagery Index, US Topo Availability | Dynamic map export        |
+| Imagery     | NAIP Plus, NAIP 4-Band                                                                                | ImageServer export         |
+| Cartography | Contours, Geographic Names, Governmental Units, Map Indices, Selectable Polygons, Structures, Transportation, USGS Trails | Dynamic map export |
+| Hazards     | FEMA National Flood Hazard Layer                                                                      | Dynamic map export         |
+| Other Data  | Scanned USA Topo Maps, BLM PLSS, FWS National Wetlands Inventory                                       | Cached tiles / map export  |
+| Indexes     | 3DEP Elevation Index, NHDPlus HR Index, Seamless 1m DEM Index, NAIP Imagery Index, US Topo Availability, Special Edition 250K Maps, 3DEP Acquisition Grid | Dynamic map export |
 
-Note: layers added later render on top of earlier ones. Adding a basemap after an overlay will cover it; remove and re-add layers to change stacking.
+A few services from the page are intentionally excluded: WFS/WCS endpoints and FeatureServers (not raster-displayable), NLCD land cover (WMS landing page only), and partner endpoints that were unreachable at testing time (ScienceBase geology, USGS ecosystems, GAP land cover, earthquake faults, mine symbols, NPS boundaries).
+
+Note: layers added later render on top of earlier ones (or beneath the `beforeId` layer when configured). Remove and re-add layers to change stacking.
 
 ## Installation
 
@@ -51,14 +58,14 @@ import "maplibre-gl-national-map/style.css";
 
 const map = new maplibregl.Map({
   container: "map",
-  style: "https://demotiles.maplibre.org/style.json",
+  style: "https://tiles.openfreemap.org/styles/positron",
   center: [-98.5, 39.8],
   zoom: 4,
 });
 
 map.on("load", () => {
   const control = new NationalMapControl({
-    title: "National Map",
+    title: "USGS National Map",
     collapsed: false,
     theme: "auto",
   });
@@ -92,7 +99,7 @@ function App() {
 
     const mapInstance = new maplibregl.Map({
       container: mapContainer.current,
-      style: "https://demotiles.maplibre.org/style.json",
+      style: "https://tiles.openfreemap.org/styles/positron",
       center: [-98.5, 39.8],
       zoom: 4,
     });
@@ -131,10 +138,11 @@ The main control class implementing MapLibre's `IControl` interface.
 | ------------ | --------- | ---------------- | -------------------------------------------------------------------------- |
 | `collapsed`  | `boolean` | `true`           | Whether the panel starts collapsed (showing only the 29x29 toggle button)  |
 | `position`   | `string`  | `'top-right'`    | Control position on the map                                                |
-| `title`      | `string`  | `'National Map'` | Title displayed in the header                                              |
-| `panelWidth` | `number`  | `320`            | Width of the dropdown panel in pixels                                      |
+| `title`      | `string`  | `'USGS National Map'` | Title displayed in the header                                              |
+| `panelWidth` | `number`  | `320`            | Initial width of the dropdown panel in pixels (user-resizable by dragging the panel edge) |
 | `className`  | `string`  | `''`             | Custom CSS class name                                                      |
 | `theme`      | `string`  | `'auto'`         | Color theme: `'light'`, `'dark'`, or `'auto'` (follows `prefers-color-scheme`) |
+| `beforeId`   | `string`  | `undefined`      | Existing layer id to insert added layers before, so services render underneath it (ignored if the layer does not exist) |
 
 #### Methods
 

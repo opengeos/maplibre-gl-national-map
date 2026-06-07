@@ -1,6 +1,6 @@
 {
   "id": "maplibre-gl-national-map",
-  "name": "National Map",
+  "name": "USGS National Map",
   "version": "0.1.0",
   "entry": "dist/index.js",
   "description": "Search and add USGS National Map web services to the map.",

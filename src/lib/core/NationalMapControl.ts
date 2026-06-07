@@ -6,11 +6,15 @@ import type {
   NationalMapControlEventHandler,
   NationalMapTheme,
 } from './types';
-import { STATIC_CATALOG, type NationalMapService } from '../data/catalog';
+import {
+  STATIC_CATALOG,
+  type NationalMapCategory,
+  type NationalMapService,
+} from '../data/catalog';
 import { fetchCatalog } from '../data/catalogClient';
-import { filterServices, groupByCategory } from '../data/filter';
+import { CATEGORY_ORDER, filterServices, groupByCategory } from '../data/filter';
 import { LayerManager, type ActiveLayer } from './LayerManager';
-import { debounce } from '../utils';
+import { clamp, debounce } from '../utils';
 
 /**
  * Default options for the NationalMapControl
@@ -18,11 +22,15 @@ import { debounce } from '../utils';
 const DEFAULT_OPTIONS: Required<NationalMapControlOptions> = {
   collapsed: true,
   position: 'top-right',
-  title: 'National Map',
+  title: 'USGS National Map',
   panelWidth: 320,
   className: '',
   theme: 'auto',
+  beforeId: '',
 };
+
+/** Width bounds for the user-resizable panel. */
+const MIN_PANEL_WIDTH = 240;
 
 /**
  * Event handlers map type
@@ -44,7 +52,7 @@ type EventHandlersMap = globalThis.Map<
  * @example
  * ```typescript
  * const control = new NationalMapControl({
- *   title: 'National Map',
+ *   title: 'USGS National Map',
  *   collapsed: false,
  *   theme: 'auto',
  * });
@@ -66,9 +74,15 @@ export class NationalMapControl implements IControl {
   private _layerManager?: LayerManager;
   private _fetchController?: AbortController;
 
+  // Categories collapsed in the catalog list (Basemaps starts expanded)
+  private _collapsedCategories: Set<NationalMapCategory> = new Set(
+    CATEGORY_ORDER.filter((category) => category !== 'Basemaps'),
+  );
+
   // Panel sections (rebuilt on data changes)
   private _catalogList?: HTMLElement;
   private _activeSection?: HTMLElement;
+  private _resizeHandle?: HTMLElement;
 
   // Panel positioning handlers
   private _resizeHandler: (() => void) | null = null;
@@ -100,7 +114,9 @@ export class NationalMapControl implements IControl {
   onAdd(map: MapLibreMap): HTMLElement {
     this._map = map;
     this._mapContainer = map.getContainer();
-    this._layerManager = new LayerManager(map);
+    this._layerManager = new LayerManager(map, {
+      beforeId: this._options.beforeId || undefined,
+    });
     this._container = this._createContainer();
     this._panel = this._createPanel();
 
@@ -174,6 +190,7 @@ export class NationalMapControl implements IControl {
     this._panel = undefined;
     this._catalogList = undefined;
     this._activeSection = undefined;
+    this._resizeHandle = undefined;
     this._eventHandlers.clear();
   }
 
@@ -376,9 +393,9 @@ export class NationalMapControl implements IControl {
     toggleBtn.innerHTML = `
       <span class="national-map-icon">
         <svg viewBox="0 0 24 24" width="22" height="22" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <polygon points="12 3 21 8 12 13 3 8 12 3"/>
-          <polyline points="3 12 12 17 21 12"/>
-          <polyline points="3 16 12 21 21 16"/>
+          <polygon points="1 6 8 3 16 6 23 3 23 18 16 21 8 18 1 21 1 6"/>
+          <line x1="8" y1="3" x2="8" y2="18"/>
+          <line x1="16" y1="6" x2="16" y2="21"/>
         </svg>
       </span>
     `;
@@ -459,11 +476,63 @@ export class NationalMapControl implements IControl {
 
     panel.appendChild(header);
     panel.appendChild(content);
+    panel.appendChild(this._createResizeHandle(panel));
 
     this._renderCatalogList();
     this._renderActiveSection();
 
     return panel;
+  }
+
+  /**
+   * Creates the drag handle used to resize the panel width. The handle sits
+   * on the panel edge facing away from its anchored side (left edge when the
+   * control is in a right corner, right edge in a left corner) - the side is
+   * applied in _updatePanelPosition().
+   *
+   * @param panel - The panel element being resized
+   * @returns The resize handle element
+   */
+  private _createResizeHandle(panel: HTMLElement): HTMLElement {
+    const handle = document.createElement('div');
+    handle.className = 'national-map-resize-handle';
+    handle.setAttribute('aria-hidden', 'true');
+    this._resizeHandle = handle;
+
+    let startX = 0;
+    let startWidth = 0;
+
+    const onPointerMove = (e: PointerEvent) => {
+      // Panels anchored right grow leftwards (drag left = wider); panels
+      // anchored left grow rightwards (drag right = wider).
+      const anchoredRight = this._getControlPosition().endsWith('right');
+      const delta = anchoredRight ? startX - e.clientX : e.clientX - startX;
+      const maxWidth = this._mapContainer
+        ? this._mapContainer.getBoundingClientRect().width - 20
+        : Number.MAX_SAFE_INTEGER;
+      const width = Math.round(clamp(startWidth + delta, MIN_PANEL_WIDTH, maxWidth));
+      panel.style.width = `${width}px`;
+    };
+
+    const onPointerUp = (e: PointerEvent) => {
+      handle.releasePointerCapture(e.pointerId);
+      handle.removeEventListener('pointermove', onPointerMove);
+      handle.removeEventListener('pointerup', onPointerUp);
+      panel.classList.remove('resizing');
+      this.setState({ panelWidth: panel.getBoundingClientRect().width });
+    };
+
+    handle.addEventListener('pointerdown', (e: PointerEvent) => {
+      e.preventDefault();
+      startX = e.clientX;
+      startWidth = panel.getBoundingClientRect().width;
+      panel.classList.add('resizing');
+      handle.setPointerCapture(e.pointerId);
+      handle.addEventListener('pointermove', onPointerMove);
+      handle.addEventListener('pointerup', onPointerUp);
+    });
+
+    return handle;
   }
 
   /** Rebuilds the searchable, grouped catalog list. */
@@ -481,17 +550,43 @@ export class NationalMapControl implements IControl {
       return;
     }
 
+    // Active searches show every matching group expanded; otherwise honor
+    // the per-category collapsed state.
+    const searching = this._query.trim().length > 0;
+
     for (const group of groups) {
+      const expanded = searching || !this._collapsedCategories.has(group.category);
+
       const groupEl = document.createElement('div');
       groupEl.className = 'national-map-group';
 
-      const groupTitle = document.createElement('div');
-      groupTitle.className = 'national-map-group-title';
-      groupTitle.textContent = group.category;
-      groupEl.appendChild(groupTitle);
+      const groupToggle = document.createElement('button');
+      groupToggle.className = 'national-map-group-toggle';
+      groupToggle.type = 'button';
+      groupToggle.setAttribute('aria-expanded', String(expanded));
+      groupToggle.innerHTML = `
+        <span class="national-map-chevron${expanded ? ' expanded' : ''}">
+          <svg viewBox="0 0 24 24" width="12" height="12" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="9 6 15 12 9 18"/>
+          </svg>
+        </span>
+        <span class="national-map-group-title">${group.category}</span>
+        <span class="national-map-group-count">${group.services.length}</span>
+      `;
+      groupToggle.addEventListener('click', () => {
+        if (this._collapsedCategories.has(group.category)) {
+          this._collapsedCategories.delete(group.category);
+        } else {
+          this._collapsedCategories.add(group.category);
+        }
+        this._renderCatalogList();
+      });
+      groupEl.appendChild(groupToggle);
 
-      for (const service of group.services) {
-        groupEl.appendChild(this._createServiceRow(service));
+      if (expanded) {
+        for (const service of group.services) {
+          groupEl.appendChild(this._createServiceRow(service));
+        }
       }
 
       this._catalogList.appendChild(groupEl);
@@ -724,5 +819,13 @@ export class NationalMapControl implements IControl {
     // screens show a vertical scrollbar instead of clipping.
     const available = Math.max(120, mapRect.height - anchorOffset - edgeMargin);
     this._panel.style.maxHeight = `${available}px`;
+
+    // Place the resize handle on the edge the panel grows toward: the left
+    // edge when anchored to a right corner, the right edge otherwise.
+    if (this._resizeHandle) {
+      const anchoredRight = position.endsWith('right');
+      this._resizeHandle.classList.toggle('handle-left', anchoredRight);
+      this._resizeHandle.classList.toggle('handle-right', !anchoredRight);
+    }
   }
 }

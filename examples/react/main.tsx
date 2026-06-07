@@ -21,7 +21,7 @@ function App() {
 
     const mapInstance = new maplibregl.Map({
       container: mapContainer.current,
-      style: 'https://demotiles.maplibre.org/style.json',
+      style: 'https://tiles.openfreemap.org/styles/positron',
       center: [-98.5, 39.8],
       zoom: 4,
     });
@@ -95,7 +95,7 @@ function App() {
       {map && (
         <NationalMapControlReact
           map={map}
-          title="National Map"
+          title="USGS National Map"
           collapsed={state.collapsed}
           panelWidth={320}
           theme={theme}

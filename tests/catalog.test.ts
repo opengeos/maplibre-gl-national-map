@@ -31,10 +31,16 @@ describe('STATIC_CATALOG', () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it('assigns each service the category of its host', () => {
+  it('gives each service a service URL matching its type', () => {
     for (const service of STATIC_CATALOG) {
-      expect(service.category).toBe(HOST_CATEGORY[service.host]);
+      expect(service.serviceUrl).toMatch(/^https:\/\//);
+      expect(service.serviceUrl.endsWith(`/${service.type}`)).toBe(true);
     }
+  });
+
+  it('defaults nationalmap-hosted services to their host category', () => {
+    const hosted = STATIC_CATALOG.filter((s) => s.host && s.category === HOST_CATEGORY[s.host!]);
+    expect(hosted.length).toBeGreaterThan(0);
   });
 
   it('renders the 3DEP ImageServer via exportImage with a hillshade rule', () => {
@@ -44,9 +50,16 @@ describe('STATIC_CATALOG', () => {
     expect(elevation?.renderingRule).toContain('Hillshade');
   });
 
-  it('covers all five hosts', () => {
-    const hosts = new Set(STATIC_CATALOG.map((s) => s.host));
+  it('covers all live-fetched nationalmap hosts', () => {
+    const hosts = new Set(STATIC_CATALOG.flatMap((s) => (s.host ? [s.host] : [])));
     expect([...hosts].sort()).toEqual(Object.keys(NATIONAL_MAP_HOSTS).sort());
+  });
+
+  it('includes partner-hosted services', () => {
+    const partnerIds = STATIC_CATALOG.filter((s) => !s.host).map((s) => s.id);
+    expect(partnerIds).toEqual(
+      expect.arrayContaining(['fema/NFHL', 'esri/USA_Topo_Maps', 'blm/PLSS', 'fws/Wetlands']),
+    );
   });
 });
 

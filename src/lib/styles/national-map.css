@@ -70,8 +70,11 @@
   --nm-disabled-fg: #9ca3af;
 }
 
-/* Container - matches maplibregl-ctrl styling */
-.national-map {
+/* Container - matches maplibregl-ctrl styling. The extra .maplibregl-ctrl-group
+ * selector outweighs MapLibre's own background rule regardless of CSS import
+ * order, so the button follows the theme (dark icon on light, light on dark). */
+.national-map,
+.national-map.maplibregl-ctrl-group {
   background: var(--nm-bg);
   border-radius: 4px;
   box-shadow: var(--nm-shadow);
@@ -126,7 +129,7 @@
   border-radius: 4px;
   box-shadow: var(--nm-shadow);
   min-width: 240px;
-  max-width: min(420px, calc(100% - 20px));
+  max-width: calc(100% - 20px);
   max-height: calc(100% - 60px); /* safety net; refined by JS */
   z-index: 1000;
   padding: 8px;
@@ -233,7 +236,7 @@
 
 /* Catalog groups */
 .national-map-group {
-  margin-bottom: 10px;
+  margin-bottom: 4px;
 }
 
 .national-map-group:last-child {
@@ -247,6 +250,57 @@
   letter-spacing: 0.04em;
   color: var(--nm-muted);
   padding: 4px 0;
+}
+
+/* Collapsible group header */
+.national-map-group-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 2px 4px;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.national-map-group-toggle:hover {
+  background: var(--nm-row-hover);
+}
+
+.national-map-group-toggle .national-map-group-title {
+  flex: 1 1 auto;
+  padding: 2px 0;
+}
+
+.national-map-chevron {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--nm-muted);
+  transition: transform 0.15s ease;
+}
+
+.national-map-chevron.expanded {
+  transform: rotate(90deg);
+}
+
+.national-map-chevron svg {
+  stroke: currentColor;
+  fill: none;
+  display: block;
+}
+
+.national-map-group-count {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--nm-muted);
+  background: var(--nm-row-hover);
+  border-radius: 8px;
+  padding: 1px 6px;
 }
 
 /* Catalog rows */
@@ -379,6 +433,35 @@
 .national-map-remove-btn:hover {
   color: var(--nm-fg-strong);
   background: var(--nm-btn-hover);
+}
+
+/* Resize handle - vertical strip on the panel edge facing away from the
+ * anchored corner (left edge for right corners, right edge for left corners) */
+.national-map-resize-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: ew-resize;
+  touch-action: none;
+  border-radius: 4px;
+}
+
+.national-map-resize-handle.handle-left {
+  left: -2px;
+}
+
+.national-map-resize-handle.handle-right {
+  right: -2px;
+}
+
+.national-map-resize-handle:hover,
+.national-map-panel.resizing .national-map-resize-handle {
+  background: var(--nm-accent-ring);
+}
+
+.national-map-panel.resizing {
+  user-select: none;
 }
 
 /* Empty search result */

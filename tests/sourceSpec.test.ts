@@ -13,7 +13,7 @@ describe('sourceIdFor / layerIdFor', () => {
   });
 
   it('sanitizes characters not allowed in ids', () => {
-    const weird = { ...contours, name: 'My Service/v2.0' };
+    const weird = { ...contours, id: 'carto/My Service/v2.0' };
     expect(sourceIdFor(weird)).toBe('nm-carto-My-Service-v2-0');
   });
 

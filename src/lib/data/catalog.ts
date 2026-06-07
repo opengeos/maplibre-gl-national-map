@@ -7,9 +7,17 @@
  */
 
 /**
- * The five CORS-enabled ArcGIS REST hosts under nationalmap.gov.
+ * The CORS-enabled ArcGIS REST hosts under nationalmap.gov whose service
+ * listings are fetched live at runtime.
  */
-export type NationalMapHost = 'basemap' | 'hydro' | 'elevation' | 'carto' | 'index';
+export type NationalMapHost =
+  | 'basemap'
+  | 'hydro'
+  | 'elevation'
+  | 'imagery'
+  | 'carto'
+  | 'partnerships'
+  | 'index';
 
 /**
  * Display category a service is grouped under in the control panel.
@@ -18,7 +26,10 @@ export type NationalMapCategory =
   | 'Basemaps'
   | 'Hydrography'
   | 'Elevation'
+  | 'Imagery'
   | 'Cartography'
+  | 'Hazards'
+  | 'Other Data'
   | 'Indexes';
 
 /**
@@ -40,8 +51,10 @@ export type ServiceRenderMode = 'tile' | 'export' | 'exportImage';
 export interface NationalMapService {
   /** Stable unique id, e.g. "basemap/USGSTopo". */
   id: string;
-  /** Host subdomain serving this service. */
-  host: NationalMapHost;
+  /** Full ArcGIS REST endpoint URL ending in /MapServer or /ImageServer. */
+  serviceUrl: string;
+  /** Host key when served from a nationalmap.gov subdomain (partner services omit this). */
+  host?: NationalMapHost;
   /** Display category for grouping in the panel. */
   category: NationalMapCategory;
   /** ArcGIS service name, e.g. "USGSTopo". */
@@ -71,24 +84,29 @@ export const NATIONAL_MAP_HOSTS: Record<NationalMapHost, string> = {
   basemap: 'https://basemap.nationalmap.gov/arcgis/rest/services',
   hydro: 'https://hydro.nationalmap.gov/arcgis/rest/services',
   elevation: 'https://elevation.nationalmap.gov/arcgis/rest/services',
+  imagery: 'https://imagery.nationalmap.gov/arcgis/rest/services',
   carto: 'https://carto.nationalmap.gov/arcgis/rest/services',
+  partnerships: 'https://partnerships.nationalmap.gov/arcgis/rest/services',
   index: 'https://index.nationalmap.gov/arcgis/rest/services',
 };
 
 /**
- * Display category for each host.
+ * Default display category for services discovered live on each host.
+ * Curated static entries may override this per service.
  */
 export const HOST_CATEGORY: Record<NationalMapHost, NationalMapCategory> = {
   basemap: 'Basemaps',
   hydro: 'Hydrography',
   elevation: 'Elevation',
+  imagery: 'Imagery',
   carto: 'Cartography',
+  partnerships: 'Other Data',
   index: 'Indexes',
 };
 
 const USGS_ATTRIBUTION = 'USGS The National Map';
 
-/** Shorthand factory for static catalog entries. */
+/** Shorthand factory for nationalmap.gov-hosted catalog entries. */
 function service(
   host: NationalMapHost,
   name: string,
@@ -100,9 +118,35 @@ function service(
 ): NationalMapService {
   return {
     id: `${host}/${name}`,
+    serviceUrl: `${NATIONAL_MAP_HOSTS[host]}/${name}/${type}`,
     host,
-    category: HOST_CATEGORY[host],
+    category: extra?.category ?? HOST_CATEGORY[host],
     name,
+    type,
+    title,
+    description,
+    renderMode,
+    attribution: USGS_ATTRIBUTION,
+    ...extra,
+  };
+}
+
+/** Shorthand factory for partner-hosted catalog entries (full URL given). */
+function partnerService(
+  id: string,
+  serviceUrl: string,
+  type: ServiceType,
+  renderMode: ServiceRenderMode,
+  category: NationalMapCategory,
+  title: string,
+  description: string,
+  extra?: Partial<NationalMapService>,
+): NationalMapService {
+  return {
+    id,
+    serviceUrl,
+    category,
+    name: id.split('/').pop() ?? id,
     type,
     title,
     description,
@@ -210,6 +254,24 @@ export const STATIC_CATALOG: NationalMapService[] = [
     { renderingRule: '{"rasterFunction":"Hillshade Gray"}' },
   ),
 
+  // --- Imagery (ImageServer) ---
+  service(
+    'imagery',
+    'USGSNAIPPlus',
+    'ImageServer',
+    'exportImage',
+    'NAIP Plus Imagery',
+    'Natural-color orthoimagery from the National Agriculture Imagery Program plus supplemental sources.',
+  ),
+  service(
+    'imagery',
+    'USGSNAIPImagery',
+    'ImageServer',
+    'exportImage',
+    'NAIP 4-Band Imagery',
+    'Four-band (RGB + near-infrared) National Agriculture Imagery Program orthoimagery.',
+  ),
+
   // --- Cartography (dynamic MapServer) ---
   service(
     'carto',
@@ -218,6 +280,15 @@ export const STATIC_CATALOG: NationalMapService[] = [
     'export',
     'Elevation Contours',
     'Elevation contour lines derived from the 3D Elevation Program.',
+  ),
+  service(
+    'partnerships',
+    'USGSTrails',
+    'MapServer',
+    'export',
+    'USGS Trails',
+    'Recreational trails compiled through National Map partnerships.',
+    { category: 'Cartography' },
   ),
   service(
     'carto',
@@ -268,6 +339,50 @@ export const STATIC_CATALOG: NationalMapService[] = [
     'Roads, railroads, trails, and airports from national and local sources.',
   ),
 
+  // --- Hazards (partner-hosted, dynamic MapServer) ---
+  partnerService(
+    'fema/NFHL',
+    'https://hazards.fema.gov/arcgis/rest/services/public/NFHL/MapServer',
+    'MapServer',
+    'export',
+    'Hazards',
+    'FEMA National Flood Hazard Layer',
+    'Effective flood hazard zones and regulatory floodways from FEMA flood insurance rate maps.',
+    { attribution: 'FEMA' },
+  ),
+
+  // --- Other Data (partner-hosted) ---
+  partnerService(
+    'esri/USA_Topo_Maps',
+    'https://services.arcgisonline.com/arcgis/rest/services/USA_Topo_Maps/MapServer',
+    'MapServer',
+    'tile',
+    'Other Data',
+    'Scanned USA Topo Maps',
+    'Scanned legacy USGS topographic quadrangle maps as a cached tile service.',
+    { attribution: 'USGS, Esri', maxzoom: 15 },
+  ),
+  partnerService(
+    'blm/PLSS',
+    'https://gis.blm.gov/arcgis/rest/services/Cadastral/BLM_Natl_PLSS_CadNSDI/MapServer',
+    'MapServer',
+    'export',
+    'Other Data',
+    'BLM Public Land Survey System (PLSS)',
+    'Township, range, and section grid of the Public Land Survey System from BLM cadastral data.',
+    { attribution: 'BLM' },
+  ),
+  partnerService(
+    'fws/Wetlands',
+    'https://fwspublicservices.wim.usgs.gov/wetlandsmapservice/rest/services/Wetlands/MapServer',
+    'MapServer',
+    'export',
+    'Other Data',
+    'FWS National Wetlands Inventory',
+    'Wetland and deepwater habitat extent and type from the US Fish and Wildlife Service.',
+    { attribution: 'USFWS' },
+  ),
+
   // --- Indexes (dynamic MapServer) ---
   service(
     'index',
@@ -308,5 +423,22 @@ export const STATIC_CATALOG: NationalMapService[] = [
     'export',
     'US Topo Availability',
     'Availability index for current US Topo map products.',
+  ),
+  service(
+    'index',
+    'USGS_250K_Special_Edition_Maps',
+    'MapServer',
+    'export',
+    'Special Edition 250K Maps',
+    'Special edition 1:250,000-scale topographic map products.',
+  ),
+  service(
+    'partnerships',
+    '3DEPDataAcquisition_1KMGrid',
+    'MapServer',
+    'export',
+    '3DEP Acquisition Grid (1 km)',
+    'One-kilometer grid showing 3DEP lidar data acquisition status.',
+    { category: 'Indexes' },
   ),
 ];

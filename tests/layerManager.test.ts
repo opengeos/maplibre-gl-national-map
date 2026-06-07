@@ -19,8 +19,8 @@ function createFakeMap() {
       calls.push({ method: 'addSource', args: [id, spec] });
       sources.add(id);
     },
-    addLayer(spec: { id: string }) {
-      calls.push({ method: 'addLayer', args: [spec] });
+    addLayer(spec: { id: string }, beforeId?: string) {
+      calls.push({ method: 'addLayer', args: [spec, beforeId] });
       layers.add(spec.id);
     },
     removeSource(id: string) {
@@ -112,6 +112,29 @@ describe('LayerManager', () => {
     expect(map.calls.at(-1)!.args[2]).toBe(1);
     manager.setOpacity(topo.id, -1);
     expect(map.calls.at(-1)!.args[2]).toBe(0);
+  });
+
+  it('inserts before the configured layer when it exists', () => {
+    map.addLayer({ id: 'labels' });
+    map.calls.length = 0;
+
+    const withBefore = new LayerManager(map as unknown as MapLibreMap, {
+      beforeId: 'labels',
+    });
+    withBefore.add(topo);
+
+    const addLayerCall = map.calls.find((c) => c.method === 'addLayer')!;
+    expect(addLayerCall.args[1]).toBe('labels');
+  });
+
+  it('ignores beforeId when the layer does not exist', () => {
+    const withBefore = new LayerManager(map as unknown as MapLibreMap, {
+      beforeId: 'missing-layer',
+    });
+    withBefore.add(topo);
+
+    const addLayerCall = map.calls.find((c) => c.method === 'addLayer')!;
+    expect(addLayerCall.args[1]).toBeUndefined();
   });
 
   it('lists active layers in insertion order and removes them all', () => {

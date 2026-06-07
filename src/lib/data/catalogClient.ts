@@ -72,6 +72,7 @@ export function parseHostCatalog(
 
     services.push({
       id,
+      serviceUrl: `${NATIONAL_MAP_HOSTS[host]}/${entry.name}/${type}`,
       host,
       category: HOST_CATEGORY[host],
       name: entry.name,

@@ -15,6 +15,17 @@ export interface ActiveLayer {
 }
 
 /**
+ * Options for the LayerManager.
+ */
+export interface LayerManagerOptions {
+  /**
+   * Existing layer id to insert added layers before, so they render
+   * underneath it. Ignored when the layer does not exist on the map.
+   */
+  beforeId?: string;
+}
+
+/**
  * Manages National Map raster layers on a MapLibre map: adding, removing,
  * toggling visibility, and adjusting opacity. Encapsulates the MapLibre
  * ordering quirks (layers must be removed before their sources) and guards
@@ -22,15 +33,18 @@ export interface ActiveLayer {
  */
 export class LayerManager {
   private _map: MapLibreMap;
+  private _beforeId?: string;
   private _layers: globalThis.Map<string, ActiveLayer> = new globalThis.Map();
 
   /**
    * Creates a LayerManager bound to a map.
    *
    * @param map - The MapLibre GL map instance
+   * @param options - Optional settings such as the beforeId insertion point
    */
-  constructor(map: MapLibreMap) {
+  constructor(map: MapLibreMap, options?: LayerManagerOptions) {
     this._map = map;
+    this._beforeId = options?.beforeId;
   }
 
   /**
@@ -45,8 +59,13 @@ export class LayerManager {
     const spec = buildLayerSpec(service);
     if (this._map.getSource(spec.sourceId)) return null;
 
+    // Insert before the configured layer when it exists so added services
+    // render underneath it (e.g. below a label layer).
+    const beforeId =
+      this._beforeId && this._map.getLayer(this._beforeId) ? this._beforeId : undefined;
+
     this._map.addSource(spec.sourceId, spec.source);
-    this._map.addLayer(spec.layer);
+    this._map.addLayer(spec.layer, beforeId);
 
     const active: ActiveLayer = {
       service,

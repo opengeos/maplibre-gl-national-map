@@ -4,7 +4,7 @@ import './lib/styles/national-map.css';
 // Main entry point - Core exports
 export { NationalMapControl } from './lib/core/NationalMapControl';
 export { LayerManager } from './lib/core/LayerManager';
-export type { ActiveLayer } from './lib/core/LayerManager';
+export type { ActiveLayer, LayerManagerOptions } from './lib/core/LayerManager';
 
 // Type exports
 export type {

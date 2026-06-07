@@ -21,7 +21,7 @@ import type { NationalMapControlReactProps } from "./types";
  *       {map && (
  *         <NationalMapControlReact
  *           map={map}
- *           title="National Map"
+ *           title="USGS National Map"
  *           collapsed={false}
  *           theme="auto"
  *         />

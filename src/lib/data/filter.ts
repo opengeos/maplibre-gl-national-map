@@ -11,7 +11,10 @@ export const CATEGORY_ORDER: NationalMapCategory[] = [
   'Basemaps',
   'Hydrography',
   'Elevation',
+  'Imagery',
   'Cartography',
+  'Hazards',
+  'Other Data',
   'Indexes',
 ];
 

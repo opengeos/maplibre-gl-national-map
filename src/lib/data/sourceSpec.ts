@@ -4,7 +4,7 @@
  */
 
 import type { RasterLayerSpecification, RasterSourceSpecification } from 'maplibre-gl';
-import { NATIONAL_MAP_HOSTS, type NationalMapService } from './catalog';
+import type { NationalMapService } from './catalog';
 
 /**
  * A ready-to-add MapLibre source/layer pair for a National Map service.
@@ -27,7 +27,7 @@ function sanitize(value: string): string {
  * @param service - The service to derive the id from
  */
 export function sourceIdFor(service: NationalMapService): string {
-  return `nm-${service.host}-${sanitize(service.name)}`;
+  return `nm-${sanitize(service.id)}`;
 }
 
 /**
@@ -45,7 +45,7 @@ const TILE_SIZE = 256;
 
 /** Builds the tile/export URL template for a service. */
 function tileUrlFor(service: NationalMapService): string {
-  const base = `${NATIONAL_MAP_HOSTS[service.host]}/${service.name}/${service.type}`;
+  const base = service.serviceUrl;
 
   switch (service.renderMode) {
     case 'tile':

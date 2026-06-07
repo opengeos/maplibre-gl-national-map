@@ -7,7 +7,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 // National Map services have visible coverage.
 const map = new maplibregl.Map({
   container: 'map',
-  style: 'https://demotiles.maplibre.org/style.json',
+  style: 'https://tiles.openfreemap.org/styles/positron',
   center: [-98.5, 39.8],
   zoom: 4,
 });
@@ -22,7 +22,7 @@ map.addControl(new maplibregl.FullscreenControl(), 'top-right');
 map.on('load', () => {
   // Set collapsed: true to start with just the 29x29 button (like navigation control)
   const nationalMapControl = new NationalMapControl({
-    title: 'National Map',
+    title: 'USGS National Map',
     collapsed: false,
     panelWidth: 320,
     theme: 'auto',

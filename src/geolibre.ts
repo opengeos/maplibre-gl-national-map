@@ -39,7 +39,7 @@ function createControl(): NationalMapControl {
   const nextControl = new NationalMapControl({
     collapsed: pendingState?.collapsed ?? true,
     panelWidth: pendingState?.panelWidth ?? 320,
-    title: "National Map",
+    title: "USGS National Map",
   });
 
   if (pendingState) {
