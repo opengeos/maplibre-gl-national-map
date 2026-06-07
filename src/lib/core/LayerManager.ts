@@ -50,29 +50,49 @@ export class LayerManager {
   /**
    * Adds a service to the map as a raster source + layer.
    *
+   * If the map already has the service's native source (deterministic ids from
+   * buildLayerSpec), this adopts it instead of failing: the existing source is
+   * reused, the layer is created only when missing, and the tracked entry
+   * reflects the layer's current visibility/opacity. This lets host
+   * applications that persist and restore the control's native source/layer
+   * (re)gain control of those layers.
+   *
    * @param service - The service to add
-   * @returns The tracked active layer, or null if it was already added
+   * @returns The tracked active layer, or null if the service is already tracked
    */
   add(service: NationalMapService): ActiveLayer | null {
     if (this._layers.has(service.id)) return null;
 
     const spec = buildLayerSpec(service);
-    if (this._map.getSource(spec.sourceId)) return null;
 
     // Insert before the configured layer when it exists so added services
     // render underneath it (e.g. below a label layer).
     const beforeId =
       this._beforeId && this._map.getLayer(this._beforeId) ? this._beforeId : undefined;
 
-    this._map.addSource(spec.sourceId, spec.source);
-    this._map.addLayer(spec.layer, beforeId);
+    if (this._map.getSource(spec.sourceId)) {
+      // Adopt a source the host already created. Add the layer only if it is
+      // missing, then read current map state for the tracked entry.
+      if (!this._map.getLayer(spec.layerId)) {
+        this._map.addLayer(spec.layer, beforeId);
+      }
+    } else {
+      this._map.addSource(spec.sourceId, spec.source);
+      this._map.addLayer(spec.layer, beforeId);
+    }
+
+    // Read current map state where possible so an adopted layer keeps its
+    // existing visibility/opacity (defaults match a freshly created layer).
+    const visible = this._map.getLayoutProperty(spec.layerId, 'visibility') !== 'none';
+    const rasterOpacity = this._map.getPaintProperty(spec.layerId, 'raster-opacity');
+    const opacity = typeof rasterOpacity === 'number' ? rasterOpacity : 1;
 
     const active: ActiveLayer = {
       service,
       sourceId: spec.sourceId,
       layerId: spec.layerId,
-      visible: true,
-      opacity: 1,
+      visible,
+      opacity,
     };
     this._layers.set(service.id, active);
     return active;
