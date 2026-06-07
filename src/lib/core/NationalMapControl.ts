@@ -396,6 +396,38 @@ export class NationalMapControl implements IControl {
   }
 
   /**
+   * Sets the opacity of a service currently added to the map.
+   *
+   * No-op when the service is not active. When the opacity is applied the
+   * active-layers panel is re-rendered and a `statechange` event is emitted.
+   *
+   * @param serviceId - The service id, e.g. "basemap/USGSTopo"
+   * @param opacity - Opacity in the range [0, 1] (clamped)
+   */
+  setServiceOpacity(serviceId: string, opacity: number): void {
+    if (!this._layerManager?.has(serviceId)) return;
+    this._layerManager.setOpacity(serviceId, opacity);
+    this._renderActiveSection();
+    this._emit('statechange');
+  }
+
+  /**
+   * Sets the visibility of a service currently added to the map.
+   *
+   * No-op when the service is not active. When the visibility is applied the
+   * active-layers panel is re-rendered and a `statechange` event is emitted.
+   *
+   * @param serviceId - The service id, e.g. "basemap/USGSTopo"
+   * @param visible - Whether the layer should be visible
+   */
+  setServiceVisibility(serviceId: string, visible: boolean): void {
+    if (!this._layerManager?.has(serviceId)) return;
+    this._layerManager.setVisibility(serviceId, visible);
+    this._renderActiveSection();
+    this._emit('statechange');
+  }
+
+  /**
    * Sets the control theme at runtime.
    *
    * @param theme - 'light', 'dark', or 'auto'

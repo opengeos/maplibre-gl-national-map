@@ -12,6 +12,8 @@ function createFakeMap() {
   const calls: { method: string; args: unknown[] }[] = [];
   const sources = new Set<string>();
   const layers = new Set<string>();
+  const layout = new Map<string, Record<string, unknown>>();
+  const paint = new Map<string, Record<string, unknown>>();
 
   const fake = {
     calls,
@@ -39,9 +41,21 @@ function createFakeMap() {
     },
     setLayoutProperty(layerId: string, name: string, value: unknown) {
       calls.push({ method: 'setLayoutProperty', args: [layerId, name, value] });
+      const props = layout.get(layerId) ?? {};
+      props[name] = value;
+      layout.set(layerId, props);
     },
     setPaintProperty(layerId: string, name: string, value: unknown) {
       calls.push({ method: 'setPaintProperty', args: [layerId, name, value] });
+      const props = paint.get(layerId) ?? {};
+      props[name] = value;
+      paint.set(layerId, props);
+    },
+    getLayoutProperty(layerId: string, name: string) {
+      return layout.get(layerId)?.[name];
+    },
+    getPaintProperty(layerId: string, name: string) {
+      return paint.get(layerId)?.[name];
     },
     moveLayer(layerId: string, beforeId?: string) {
       calls.push({ method: 'moveLayer', args: [layerId, beforeId] });
@@ -71,6 +85,55 @@ describe('LayerManager', () => {
   it('is a no-op when adding the same service twice', () => {
     manager.add(topo);
     expect(manager.add(topo)).toBeNull();
+    expect(manager.list()).toHaveLength(1);
+  });
+
+  it('adopts an existing source/layer instead of recreating it', () => {
+    const sourceId = sourceIdFor(topo);
+    const layerId = layerIdFor(topo);
+
+    // Simulate a host that already recreated the native source/layer (e.g. on
+    // project reload) before the control adopts it.
+    map.addSource(sourceId, { type: 'raster' });
+    map.addLayer({ id: layerId });
+    map.setLayoutProperty(layerId, 'visibility', 'none');
+    map.setPaintProperty(layerId, 'raster-opacity', 0.4);
+    map.calls.length = 0;
+
+    const active = manager.add(topo);
+    expect(active).not.toBeNull();
+    // Neither addSource nor addLayer should run when both already exist.
+    expect(map.calls.some((c) => c.method === 'addSource')).toBe(false);
+    expect(map.calls.some((c) => c.method === 'addLayer')).toBe(false);
+    // Visibility/opacity are read from the live map state.
+    expect(active!.visible).toBe(false);
+    expect(active!.opacity).toBe(0.4);
+    expect(manager.has(topo.id)).toBe(true);
+  });
+
+  it('adopts an existing source and creates the missing layer', () => {
+    const sourceId = sourceIdFor(topo);
+    const layerId = layerIdFor(topo);
+
+    map.addSource(sourceId, { type: 'raster' });
+    map.calls.length = 0;
+
+    const active = manager.add(topo);
+    expect(active).not.toBeNull();
+    // Source is reused; only the missing layer is added.
+    expect(map.calls.some((c) => c.method === 'addSource')).toBe(false);
+    expect(map.calls.some((c) => c.method === 'addLayer')).toBe(true);
+    // A freshly created layer defaults to visible at full opacity.
+    expect(active!.visible).toBe(true);
+    expect(active!.opacity).toBe(1);
+    expect(map.getLayer(layerId)).toBeDefined();
+  });
+
+  it('still returns null when the service is already tracked even if the source exists', () => {
+    manager.add(topo);
+    map.calls.length = 0;
+    expect(manager.add(topo)).toBeNull();
+    expect(map.calls).toHaveLength(0);
     expect(manager.list()).toHaveLength(1);
   });
 

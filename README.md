@@ -153,6 +153,8 @@ The main control class implementing MapLibre's `IControl` interface.
 - `setState(state)` - Update the state
 - `addService(serviceId)` - Add a catalog service to the map (e.g. `"basemap/USGSTopo"`)
 - `removeService(serviceId)` - Remove a previously added service
+- `setServiceOpacity(serviceId, opacity)` - Set the opacity (`0`–`1`) of an active service
+- `setServiceVisibility(serviceId, visible)` - Show or hide an active service
 - `getActiveLayers()` - Get the services currently added to the map
 - `setTheme(theme)` - Change the theme at runtime
 - `on(event, handler)` - Register an event handler
