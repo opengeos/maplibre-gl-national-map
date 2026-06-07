@@ -127,6 +127,29 @@ export class LayerManager {
   }
 
   /**
+   * Gets the current insertion-point layer id, if any.
+   */
+  getBeforeId(): string | undefined {
+    return this._beforeId;
+  }
+
+  /**
+   * Changes the insertion-point layer and re-anchors all managed layers
+   * beneath it (or to the top of the style when cleared/missing).
+   *
+   * @param beforeId - Layer id to insert before, or undefined for top
+   */
+  setBeforeId(beforeId?: string): void {
+    this._beforeId = beforeId;
+    const target = beforeId && this._map.getLayer(beforeId) ? beforeId : undefined;
+    for (const layer of this._layers.values()) {
+      if (this._map.getLayer(layer.layerId)) {
+        this._map.moveLayer(layer.layerId, target);
+      }
+    }
+  }
+
+  /**
    * Checks whether a service is currently added.
    *
    * @param serviceId - The service id

@@ -83,6 +83,7 @@ export class NationalMapControl implements IControl {
   private _catalogList?: HTMLElement;
   private _activeSection?: HTMLElement;
   private _resizeHandle?: HTMLElement;
+  private _beforeSelect?: HTMLSelectElement;
 
   // Panel positioning handlers
   private _resizeHandler: (() => void) | null = null;
@@ -133,6 +134,13 @@ export class NationalMapControl implements IControl {
 
     // Setup event listeners for panel positioning and click-outside
     this._setupEventListeners();
+
+    // Populate the insert-before selector once the style is available.
+    if (map.loaded()) {
+      this._refreshBeforeIdOptions();
+    } else {
+      map.once('load', () => this._refreshBeforeIdOptions());
+    }
 
     // Set initial panel state
     if (!this._state.collapsed) {
@@ -200,6 +208,7 @@ export class NationalMapControl implements IControl {
     this._catalogList = undefined;
     this._activeSection = undefined;
     this._resizeHandle = undefined;
+    this._beforeSelect = undefined;
     this._eventHandlers.clear();
   }
 
@@ -285,6 +294,8 @@ export class NationalMapControl implements IControl {
       } else {
         this._panel.classList.add('expanded');
         this._updatePanelPosition();
+        // Style layers may have changed since the panel was last open.
+        this._refreshBeforeIdOptions();
         this._emit('expand');
       }
     }
@@ -518,6 +529,27 @@ export class NationalMapControl implements IControl {
     }, 150);
     search.addEventListener('input', onSearch);
 
+    // Insert-before selector: pick the style layer that added services are
+    // inserted beneath (e.g. labels). Changing it re-anchors existing layers.
+    const beforeRow = document.createElement('div');
+    beforeRow.className = 'national-map-beforeid-row';
+
+    const beforeLabel = document.createElement('label');
+    beforeLabel.className = 'national-map-beforeid-label';
+    beforeLabel.textContent = 'Insert before';
+
+    this._beforeSelect = document.createElement('select');
+    this._beforeSelect.className = 'national-map-beforeid-select';
+    this._beforeSelect.setAttribute('aria-label', 'Layer to insert added services before');
+    beforeLabel.htmlFor = this._beforeSelect.id = 'national-map-beforeid';
+    this._beforeSelect.addEventListener('change', () => {
+      this._layerManager?.setBeforeId(this._beforeSelect?.value || undefined);
+    });
+    this._refreshBeforeIdOptions();
+
+    beforeRow.appendChild(beforeLabel);
+    beforeRow.appendChild(this._beforeSelect);
+
     // Active layers section (above the catalog so it stays in view)
     this._activeSection = document.createElement('div');
     this._activeSection.className = 'national-map-active';
@@ -527,6 +559,7 @@ export class NationalMapControl implements IControl {
     this._catalogList.className = 'national-map-catalog';
 
     content.appendChild(search);
+    content.appendChild(beforeRow);
     content.appendChild(this._activeSection);
     content.appendChild(this._catalogList);
 
@@ -589,6 +622,41 @@ export class NationalMapControl implements IControl {
     });
 
     return handle;
+  }
+
+  /**
+   * Repopulates the insert-before selector with the map's current style
+   * layers (excluding layers managed by this control). Keeps the current
+   * selection when its layer still exists.
+   */
+  private _refreshBeforeIdOptions(): void {
+    if (!this._beforeSelect) return;
+
+    const current = this._layerManager?.getBeforeId() ?? this._options.beforeId ?? '';
+    this._beforeSelect.innerHTML = '';
+
+    const top = document.createElement('option');
+    top.value = '';
+    top.textContent = 'Top (above all layers)';
+    this._beforeSelect.appendChild(top);
+
+    let layers: { id: string }[] = [];
+    try {
+      layers = this._map?.getStyle()?.layers ?? [];
+    } catch {
+      // Style not loaded yet; leave only the default option.
+    }
+    for (const layer of layers) {
+      if (layer.id.startsWith('nm-')) continue; // skip our own layers
+      const option = document.createElement('option');
+      option.value = layer.id;
+      option.textContent = layer.id;
+      this._beforeSelect.appendChild(option);
+    }
+
+    // Restore the selection if the layer still exists; otherwise fall to top.
+    this._beforeSelect.value =
+      current && layers.some((l) => l.id === current) ? current : '';
   }
 
   /** Rebuilds the searchable, grouped catalog list. */

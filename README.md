@@ -11,7 +11,7 @@ A [MapLibre GL JS](https://maplibre.org) plugin for searching and adding [USGS N
 
 - **Service Catalog** - Browse 20+ USGS National Map services grouped by collapsible categories (Basemaps, Hydrography, Elevation, Cartography, Indexes)
 - **Search** - Filter services by name, title, description, or category; matching categories expand automatically
-- **Layer Insertion Point** - Optional `beforeId` inserts added layers beneath an existing layer (e.g. labels)
+- **Layer Insertion Point** - An "Insert before" selector in the panel (or the `beforeId` option) inserts added layers beneath an existing layer (e.g. labels); changing it re-anchors layers already added
 - **Resizable Panel** - Drag the panel edge to resize; works from left and right corner placements
 - **Live Catalog Refresh** - Fetches the latest service listings from the National Map ArcGIS REST endpoints at runtime, with a built-in static catalog as an instant-render fallback (works offline)
 - **Layer Management** - Toggle visibility, adjust opacity, and remove added layers from an "Active layers" section
@@ -142,7 +142,7 @@ The main control class implementing MapLibre's `IControl` interface.
 | `panelWidth` | `number`  | `320`            | Initial width of the dropdown panel in pixels (user-resizable by dragging the panel edge) |
 | `className`  | `string`  | `''`             | Custom CSS class name                                                      |
 | `theme`      | `string`  | `'auto'`         | Color theme: `'light'`, `'dark'`, or `'auto'` (follows `prefers-color-scheme`) |
-| `beforeId`   | `string`  | `undefined`      | Existing layer id to insert added layers before, so services render underneath it (ignored if the layer does not exist) |
+| `beforeId`   | `string`  | `undefined`      | Existing layer id to insert added layers before, so services render underneath it (ignored if the layer does not exist). Also adjustable at runtime via the panel's "Insert before" selector |
 
 #### Methods
 

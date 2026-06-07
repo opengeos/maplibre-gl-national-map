@@ -43,6 +43,9 @@ function createFakeMap() {
     setPaintProperty(layerId: string, name: string, value: unknown) {
       calls.push({ method: 'setPaintProperty', args: [layerId, name, value] });
     },
+    moveLayer(layerId: string, beforeId?: string) {
+      calls.push({ method: 'moveLayer', args: [layerId, beforeId] });
+    },
   };
   return fake;
 }
@@ -135,6 +138,28 @@ describe('LayerManager', () => {
 
     const addLayerCall = map.calls.find((c) => c.method === 'addLayer')!;
     expect(addLayerCall.args[1]).toBeUndefined();
+  });
+
+  it('setBeforeId re-anchors managed layers and applies to later adds', () => {
+    map.addLayer({ id: 'labels' });
+    manager.add(topo);
+    map.calls.length = 0;
+
+    manager.setBeforeId('labels');
+    expect(manager.getBeforeId()).toBe('labels');
+    const moveCall = map.calls.find((c) => c.method === 'moveLayer')!;
+    expect(moveCall.args).toEqual([layerIdFor(topo), 'labels']);
+
+    manager.add(nhd);
+    const addLayerCall = map.calls.find((c) => c.method === 'addLayer')!;
+    expect(addLayerCall.args[1]).toBe('labels');
+
+    // Clearing moves layers back to the top (undefined target)
+    map.calls.length = 0;
+    manager.setBeforeId(undefined);
+    const moves = map.calls.filter((c) => c.method === 'moveLayer');
+    expect(moves).toHaveLength(2);
+    expect(moves.every((c) => c.args[1] === undefined)).toBe(true);
   });
 
   it('lists active layers in insertion order and removes them all', () => {
