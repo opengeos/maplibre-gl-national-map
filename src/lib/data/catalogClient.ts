@@ -107,8 +107,9 @@ export function mergeCatalog(
 
 /**
  * Fetches the live service listings from all National Map hosts and merges
- * them with the static catalog. Never rejects: any host failure falls back to
- * the static entries for that host.
+ * them with the static catalog. Never rejects: per-host failures - including
+ * fetches cancelled via the abort signal - are captured by
+ * Promise.allSettled and fall back to the static entries for that host.
  *
  * @param signal - Optional abort signal to cancel in-flight requests
  * @returns The merged catalog (the static catalog if everything fails)

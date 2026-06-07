@@ -117,6 +117,14 @@ export class NationalMapControl implements IControl {
     this._layerManager = new LayerManager(map, {
       beforeId: this._options.beforeId || undefined,
     });
+
+    // Restore layers persisted in state (e.g. project state applied via
+    // setState before the control was added to a map).
+    for (const id of this._state.activeLayerIds ?? []) {
+      const service = this._catalog.find((s) => s.id === id);
+      if (service) this._layerManager.add(service);
+    }
+
     this._container = this._createContainer();
     this._panel = this._createPanel();
 
@@ -145,7 +153,8 @@ export class NationalMapControl implements IControl {
         this._renderCatalogList();
       })
       .catch(() => {
-        // fetchCatalog only rejects on abort; the static catalog stays in place.
+        // Defensive: fetchCatalog never rejects (failures and aborts resolve
+        // to the static catalog), so this only guards unexpected errors.
       });
 
     return this._container;
@@ -195,6 +204,16 @@ export class NationalMapControl implements IControl {
   }
 
   /**
+   * Default position used when map.addControl() is called without one.
+   * Implements the IControl interface.
+   *
+   * @returns The position from the control options
+   */
+  getDefaultPosition(): 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' {
+    return this._options.position;
+  }
+
+  /**
    * Gets the current state of the control.
    *
    * @returns The current control state
@@ -207,12 +226,49 @@ export class NationalMapControl implements IControl {
   }
 
   /**
-   * Updates the control state.
+   * Updates the control state and applies it to the live control: the panel
+   * reflects `collapsed` and `panelWidth`, and `activeLayerIds` are
+   * reconciled with the map (missing layers added, extras removed). When the
+   * control is not yet on a map, the state is stored and applied in onAdd.
    *
    * @param newState - Partial state to merge with current state
    */
   setState(newState: Partial<NationalMapState>): void {
     this._state = { ...this._state, ...newState };
+
+    // Reflect collapsed state in the live panel
+    if (newState.collapsed !== undefined && this._panel) {
+      if (newState.collapsed) {
+        this._panel.classList.remove('expanded');
+      } else {
+        this._panel.classList.add('expanded');
+        this._updatePanelPosition();
+      }
+    }
+
+    // Apply panel width
+    if (newState.panelWidth !== undefined && this._panel) {
+      this._panel.style.width = `${newState.panelWidth}px`;
+    }
+
+    // Reconcile restored layers with the map
+    if (newState.activeLayerIds && this._layerManager) {
+      const wanted = new Set(newState.activeLayerIds);
+      for (const layer of this._layerManager.list()) {
+        if (!wanted.has(layer.service.id)) {
+          this._layerManager.remove(layer.service.id);
+        }
+      }
+      for (const id of wanted) {
+        if (!this._layerManager.has(id)) {
+          const service = this._catalog.find((s) => s.id === id);
+          if (service) this._layerManager.add(service);
+        }
+      }
+      this._renderCatalogList();
+      this._renderActiveSection();
+    }
+
     this._emit('statechange');
   }
 
